@@ -77,6 +77,16 @@ duckx::Paragraph &duckx::TableCell::paragraphs() {
     return this->paragraph;
 }
 
+duckx::TableCell::MergeFlag duckx::TableCell::merge_flag() const {
+    auto node = this->current.child("w:tcPr").child("w:vMerge");
+    if (node.empty()) {
+        return duckx::TableCell::MergeFlag::None;
+    }
+
+    auto val = node.attribute("w:val").as_string();
+    return 0 == strcmp(val, "restart") ? duckx::TableCell::MergeFlag::Start : duckx::TableCell::MergeFlag::Merged;
+}
+
 // Table rows
 duckx::TableRow::TableRow() {}
 
@@ -136,6 +146,24 @@ duckx::TableRow &duckx::Table::rows() {
     return this->row;
 }
 
+duckx::Paragraph duckx::Table::prev_paragraph() {
+    duckx::Paragraph p;
+    if (!this->current) {
+        // If the current node is null, return an empty Paragraph object
+        return p;
+    }
+
+    // Get the previous paragraph of the table
+    pugi::xml_node prev = this->current.previous_sibling("w:p");
+    if (!prev) {
+        return p;
+    }
+
+    p.set_parent(this->parent);
+    p.set_current(prev);
+    return p;
+}
+
 duckx::Paragraph::Paragraph() {}
 
 duckx::Paragraph::Paragraph(pugi::xml_node parent, pugi::xml_node current) {
@@ -157,6 +185,10 @@ void duckx::Paragraph::set_current(pugi::xml_node node) {
 duckx::Paragraph &duckx::Paragraph::next() {
     this->current = this->current.next_sibling();
     this->run.set_parent(this->current);
+    return *this;
+}
+duckx::Paragraph &duckx::Paragraph::prev() {
+    this->current = this->current.previous_sibling("w:p");
     return *this;
 }
 

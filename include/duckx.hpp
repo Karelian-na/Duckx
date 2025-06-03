@@ -60,6 +60,7 @@ class Paragraph {
     void set_parent(pugi::xml_node);
     void set_current(pugi::xml_node);
 
+    Paragraph &prev();
     Paragraph &next();
     bool has_next() const;
 
@@ -68,10 +69,21 @@ class Paragraph {
     Run &add_run(const char *, duckx::formatting_flag = duckx::none);
     Paragraph &insert_paragraph_after(const std::string &,
                                       duckx::formatting_flag = duckx::none);
+
+    operator bool() const {
+        return this->current != 0;
+    }
 };
 
 // TableCell contains one or more paragraphs
 class TableCell {
+  public:
+    enum class MergeFlag {
+      Start,
+      Merged,
+      None,
+    };
+
   private:
     friend class IteratorHelper;
     pugi::xml_node parent;
@@ -85,6 +97,8 @@ class TableCell {
 
     void set_parent(pugi::xml_node);
     void set_current(pugi::xml_node);
+
+    MergeFlag merge_flag() const;
 
     Paragraph &paragraphs();
 
@@ -126,6 +140,8 @@ class Table {
     Table(pugi::xml_node, pugi::xml_node);
     void set_parent(pugi::xml_node);
     void set_current(pugi::xml_node);
+
+    Paragraph prev_paragraph();
 
     Table &next();
     bool has_next() const;
