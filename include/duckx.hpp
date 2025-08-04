@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <stdlib.h>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 
 #include <constants.hpp>
 #include <duckxiterator.hpp>
@@ -19,6 +21,24 @@
 // TODO: Use container-iterator design pattern!
 
 namespace duckx {
+class Style {
+  private:
+    friend class IteratorHelper;
+    pugi::xml_node current;
+
+  public:
+    Style();
+    Style(pugi::xml_node);
+    void set_current(pugi::xml_node);
+
+    std::string id() const;
+    std::string name() const;
+    Style& next();
+    operator bool() const {
+        return this->current != 0;
+    }
+};
+
 // Run contains runs in a paragraph
 class Run {
   private:
@@ -70,6 +90,7 @@ class Paragraph {
     Paragraph &insert_paragraph_after(const std::string &,
                                       duckx::formatting_flag = duckx::none);
 
+    std::string style_id() const;
     operator bool() const {
         return this->current != 0;
     }
@@ -158,8 +179,10 @@ class Document {
     Paragraph paragraph;
     Table table;
     pugi::xml_document document;
+    pugi::xml_document doc_styles;
     bool flag_is_open;
 
+    std::unordered_map<std::string, Style> styles_;
   public:
     Document();
     Document(std::string);
@@ -170,6 +193,8 @@ class Document {
 
     Paragraph &paragraphs();
     Table &tables();
+
+    const std::unordered_map<std::string, Style> &styles();
 };
 } // namespace duckx
 

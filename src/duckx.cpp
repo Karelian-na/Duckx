@@ -267,6 +267,10 @@ duckx::Paragraph::insert_paragraph_after(const std::string &text,
     return *p;
 }
 
+std::string duckx::Paragraph::style_id() const {
+    return this->current.child("w:pPr").child("w:pStyle").attribute("w:val").value();
+}
+
 duckx::Document::Document() {
     // TODO: this function must be removed!
     this->directory = "";
@@ -298,9 +302,24 @@ void duckx::Document::open() {
     zip_entry_read(zip, &buf, &bufsize);
 
     zip_entry_close(zip);
-    zip_close(zip);
 
     this->document.load_buffer(buf, bufsize);
+
+    zip_entry_open(zip, "word/styles.xml");
+    zip_entry_read(zip, &buf, &bufsize);
+
+    zip_entry_close(zip);
+
+    this->doc_styles.load_buffer(buf, bufsize);
+
+    zip_close(zip);
+
+    Style style;
+    style.set_current(doc_styles.child("w:styles").child("w:style"));
+    while (style) {
+        styles_.emplace(style.id(), style);
+        style = style.next();
+    }
 
     free(buf);
 
@@ -391,4 +410,39 @@ duckx::Paragraph &duckx::Document::paragraphs() {
 duckx::Table &duckx::Document::tables() {
     this->table.set_parent(document.child("w:document").child("w:body"));
     return this->table;
+}
+
+duckx::Style::Style() {}
+
+duckx::Style::Style(pugi::xml_node current) {
+    this->set_current(current);
+}
+
+const std::unordered_map<std::string, duckx::Style> &duckx::Document::styles() {
+    return styles_;
+}
+
+void duckx::Style::set_current(pugi::xml_node node) {
+    this->current = node;
+}
+
+duckx::Style &duckx::Style::next() {
+    this->current = this->current.next_sibling("w:style");
+    return *this;
+}
+
+std::string duckx::Style::id() const {
+    if (!this->current) {
+        return "";
+    }
+
+    return this->current.attribute("w:styleId").value();
+}
+
+std::string duckx::Style::name() const {
+    if (!this->current) {
+        return "";
+    }
+
+    return this->current.child("w:name").attribute("w:val").value();
 }
