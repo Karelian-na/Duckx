@@ -7,11 +7,14 @@
 #ifndef DUCKXITERATOR_H
 #define DUCKXITERATOR_H
 
+#include <type_traits>
+
 namespace pugi {
 class xml_node;
 }
 
 namespace duckx {
+class Run;
 template <class T, class P, class C = P> class Iterator {
   private:
     using ParentType = P;
@@ -34,8 +37,29 @@ template <class T, class P, class C = P> class Iterator {
         return !this->operator!=(other);
     }
 
-    Iterator &operator++() {
+    template <typename K = T>
+    Iterator& operator++() {
+      this->current = this->current.next_sibling();
+      return *this;
+    }
+
+    template <>
+    Iterator& operator++<duckx::Run>() {
+        auto old = this->current;
         this->current = this->current.next_sibling();
+        if (this->current) {
+            return *this;
+        }
+
+        if (old.parent() != this->parent) {
+            this->current = old.parent().next_sibling();
+        } else {
+            this->current = old.next_sibling();
+        }
+
+        if (this->current && strcmp(this->current.name(), "w:r") != 0) {
+            this->current = this->current.child("w:r");
+        }
         return *this;
     }
 
